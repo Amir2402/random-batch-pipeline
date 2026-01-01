@@ -5,4 +5,6 @@ up:
 
 down:
 	sudo astro dev stop
-	
+
+push:
+	git push -u origin main
