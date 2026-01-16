@@ -10,3 +10,5 @@ S3_ACCESS = {
     'aws_secret_key': 'admin123',
     'region_name': 'us-east-1'
 }
+
+API_URL = 'https://randomuser.me/api/'
