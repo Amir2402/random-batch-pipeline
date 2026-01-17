@@ -1,39 +1,60 @@
 from include.config.variables import S3_ACCESS 
 import boto3 
 import json 
+from datetime import datetime
 
-def s3_resource(): 
-    s3 = boto3.resource(
-        's3',
-        endpoint_url = S3_ACCESS['s3_endpoint'], 
-        aws_access_key_id = S3_ACCESS['aws_access_key'],
-        aws_secret_access_key = S3_ACCESS['aws_secret_key'],
-    )
-    return s3
+class S3HelperFunctions():
+    def __init__(self, current_timestamp):
+        self.s3_endpoint = S3_ACCESS['s3_endpoint']
+        self.aws_access_key = S3_ACCESS['aws_access_key']
+        self.aws_secret_key = S3_ACCESS['aws_secret_key']
 
-def s3_connection(): 
-    s3 = boto3.client(
-        's3',
-        endpoint_url = S3_ACCESS['s3_endpoint'], 
-        aws_access_key_id = S3_ACCESS['aws_access_key'],
-        aws_secret_access_key = S3_ACCESS['aws_secret_key']
-    )
-    return s3
+        self.current_year = current_timestamp.year 
+        self.current_month = current_timestamp.month
+        self.current_day = current_timestamp.day
+        self.current_hour = current_timestamp.hour 
+        
+    def s3_resource(self): 
+        s3 = boto3.resource(
+            's3',
+            endpoint_url = self.s3_endpoint, 
+            aws_access_key_id = self.aws_access_key,
+            aws_secret_access_key = self.aws_secret_key,
+        )
+        return s3
 
-def write_to_s3(object_to_store, base_filename, current_timestamp, bucket_name):
-    s3 = s3_connection()
+    def s3_client(self): 
+        s3 = boto3.client(
+            's3',
+            endpoint_url = self.s3_endpoint, 
+            aws_access_key_id = self.aws_access_key,
+            aws_secret_access_key = self.aws_secret_key
+        )
+        return s3
+
+    def write_to_s3(self, object_to_store, base_filename, bucket_name):
+        s3 = self.s3_client()
+        
+        object_key = f"{base_filename}/year={self.current_year}/month={self.current_month}/day={self.current_day}/hour={self.current_hour}.json"
+        object_body = {"data": object_to_store}
+
+        try:
+            s3.put_object(
+                Bucket = bucket_name,
+                Key = object_key,
+                Body = json.dumps(object_body).encode("utf-8"),
+                ContentType = "application/json"
+            )
+        
+        except:
+            print(f'Error occured when writing object {object_key}')
     
-    current_year = current_timestamp.year 
-    current_month = current_timestamp.month
-    current_day = current_timestamp.day
-    current_hour = current_timestamp.hour 
-    
-    object_key = f"{base_filename}/year={current_year}/month={current_month}/day={current_day}/hour={current_hour}.json"
-    object_body = {"data": object_to_store}
+    def read_json_s3(self, base_filename, bucket_name): 
+        s3 = self.s3_resource()
 
-    s3.put_object(
-        Bucket = bucket_name,
-        Key = object_key,
-        Body = json.dumps(object_body).encode("utf-8"),
-        ContentType = "application/json"
-    )
+        object_key = f"{base_filename}/year={self.current_year}/month={self.current_month}/day={self.current_day}/hour={self.current_hour - 1}.json"
+        object_to_read = s3.Object(bucket_name, object_key)
+    
+        file_content = object_to_read.get()['Body'].read().decode('utf-8')
+
+        return file_content

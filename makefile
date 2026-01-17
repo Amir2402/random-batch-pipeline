@@ -8,3 +8,6 @@ down:
 
 push:
 	git push -u origin main
+
+restart:
+	sudo astro dev restart

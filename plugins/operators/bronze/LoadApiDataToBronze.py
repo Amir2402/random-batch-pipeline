@@ -1,31 +1,51 @@
 from airflow.sdk import BaseOperator
 import requests as rq
 from datetime import datetime
-from include.utils.S3HelperFunctions import s3_resource, write_to_s3
+from include.utils.S3HelperFunctions import S3HelperFunctions
+from include.config.variables import BUCKETS
 import random
 import json
 import uuid
 
 class LoadUserDataToBronze(BaseOperator): 
-    def __init__(self, bucket_name, api_url, , **kwargs): 
+    def __init__(self, bucket_name, api_url, now_timestamp, **kwargs): 
         super().__init__(**kwargs)
         self.bucket_name = bucket_name
         self.api_url = api_url
+        self.now_timestamp = now_timestamp
+        self.s3Helper = S3HelperFunctions(self.now_timestamp)
     
     def execute(self, context):
-        # if self.bucket_name not in BUCKETS.values():
-        #     self.log.info('Creating a bucket for a non valid layer!') 
+        user_data = self.fetch_api_data()
+            
+        self.log.info('Writing user_data to bronze layer')
+        self.s3Helper.write_to_s3(user_data, 'user_data', self.bucket_name)
+        self.log.info('Object written successfully!')
+
+        return user_data
+
+    def fetch_api_data(self):
+        user_data = []
+        self.log.info('Fetching API user data')
         
-        # else: 
-        #     s3 = s3_resource()
-        #     try:
-        #         bucket = s3.Bucket(self.bucket_name)
-        #         if bucket.creation_date:
-        #             self.log.info(f'bucket created on {bucket.creation_date} exists!')
+        for itr in range(1, 100):
+            req = rq.get(self.api_url)
 
-        #         else: 
-        #             s3.create_bucket(Bucket = self.bucket_name)
-        #             self.log.info(f"bucket {self.bucket_name} created successfully!")
+            try:
+                user_record = json.loads(req.content.decode())
 
-        #     except Exception as e: 
-        #         self.log.info('an error occured: ', e)
+                user_id = str(uuid.uuid4())
+                quantity_bought = random.randint(1, 10)
+                unit_price = random.uniform(1, 100)
+
+                user_record['id'] = user_id
+                user_record['quantity'] = quantity_bought
+                user_record['unit_price'] = unit_price
+                user_record['row_no'] = itr
+                
+                user_data.append(user_record)
+
+            except:
+                self.log.info(f'Failed to fetch API data, item {itr}')
+
+        return user_data
