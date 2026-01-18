@@ -1,7 +1,6 @@
 from include.config.variables import S3_ACCESS 
 import boto3 
 import json 
-from datetime import datetime
 
 class S3HelperFunctions():
     def __init__(self, current_timestamp):
@@ -52,9 +51,9 @@ class S3HelperFunctions():
     def read_json_s3(self, base_filename, bucket_name): 
         s3 = self.s3_resource()
 
-        object_key = f"{base_filename}/year={self.current_year}/month={self.current_month}/day={self.current_day}/hour={self.current_hour - 1}.json"
+        object_key = f"{base_filename}/year={self.current_year}/month={self.current_month}/day={self.current_day}/hour={self.current_hour}.json"
         object_to_read = s3.Object(bucket_name, object_key)
     
         file_content = object_to_read.get()['Body'].read().decode('utf-8')
 
-        return file_content
+        return json.loads(file_content)

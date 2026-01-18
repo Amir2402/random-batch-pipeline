@@ -1,8 +1,9 @@
 from airflow.decorators import dag
 from airflow.operators.python import PythonOperator
-from include.config.variables import BUCKETS, API_URL
+from include.config.variables import BUCKETS, API_URL, USER_DATA
 from plugins.operators.CreateBucketOperator import CreateBucketOperator
 from plugins.operators.bronze.LoadApiDataToBronze import LoadUserDataToBronze
+from plugins.operators.quality.ApiInputValidator import ApiInputValidator
 from datetime import datetime 
 
 now = datetime.now()
@@ -35,10 +36,18 @@ def generate_dag():
     load_user_data_to_bronze = LoadUserDataToBronze(
         task_id = 'load_API_data_to_bronze',
         bucket_name = BUCKETS['bronze_layer'],
+        file_name = USER_DATA,
         api_url = API_URL,
         now_timestamp = now
-    ) 
+    )
 
-    [create_bronze, create_silver, create_gold] >> load_user_data_to_bronze
+    validate_user_data_schema = ApiInputValidator(
+        task_id = 'validate_user_data_schema',
+        bucket_name = BUCKETS['bronze_layer'],
+        file_name = USER_DATA,
+        now_timestamp = now
+    )
+
+    [create_bronze, create_silver, create_gold] >> load_user_data_to_bronze >> validate_user_data_schema
 
 generate_dag() 

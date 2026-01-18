@@ -1,11 +1,10 @@
 from airflow.sdk import BaseOperator
-import requests as rq
-from datetime import datetime
+from pydantic import ValidationError
 from include.utils.S3HelperFunctions import S3HelperFunctions
 from include.config.variables import BUCKETS
-from include.utils.models import UserData
+from include.utils.models import Root
 
-class CreateBucketOperator(BaseOperator): 
+class ApiInputValidator(BaseOperator):
     def __init__(self, bucket_name, now_timestamp, file_name, **kwargs): 
         super().__init__(**kwargs)
         self.bucket_name = bucket_name
@@ -15,4 +14,9 @@ class CreateBucketOperator(BaseOperator):
     def execute(self, context):
         data_to_validate = self.s3Helper.read_json_s3(self.file_name, self.bucket_name)
         
-        res = UserData(data_to_validate)
+        try:
+            parsed = Root(**data_to_validate)
+            self.log.info('data validation passed successfully!')
+
+        except ValidationError as e:
+            self.log.info('alert API schema change!', e)

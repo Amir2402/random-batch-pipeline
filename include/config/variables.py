@@ -12,3 +12,4 @@ S3_ACCESS = {
 }
 
 API_URL = 'https://randomuser.me/api/'
+USER_DATA = 'user_data'

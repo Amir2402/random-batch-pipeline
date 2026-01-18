@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 from pydantic import BaseModel
 
 
@@ -24,7 +24,7 @@ class Location(BaseModel):
     city: str
     state: str
     country: str
-    postcode: int
+    postcode: Union[int, str]
     coordinates: Coordinates
     timezone: Timezone
 
@@ -82,14 +82,5 @@ class DataItem(BaseModel):
     unit_price: float
     row_no: int
 
-class UserData(BaseModel):
+class Root(BaseModel):
     data: List[DataItem]
-
-# from S3HelperFunctions import S3HelperFunctions
-# from datetime import datetime
-# import json
-# helper = S3HelperFunctions(datetime.now())
-
-# data = json.loads(helper.read_json_s3('user_data', 'bronze'))
-
-# res = UserData(data = data['data'])

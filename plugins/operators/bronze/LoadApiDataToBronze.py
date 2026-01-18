@@ -2,24 +2,24 @@ from airflow.sdk import BaseOperator
 import requests as rq
 from datetime import datetime
 from include.utils.S3HelperFunctions import S3HelperFunctions
-from include.config.variables import BUCKETS
 import random
 import json
 import uuid
 
 class LoadUserDataToBronze(BaseOperator): 
-    def __init__(self, bucket_name, api_url, now_timestamp, **kwargs): 
+    def __init__(self, bucket_name, api_url, now_timestamp, file_name, **kwargs): 
         super().__init__(**kwargs)
         self.bucket_name = bucket_name
         self.api_url = api_url
         self.now_timestamp = now_timestamp
+        self.file_name = file_name
         self.s3Helper = S3HelperFunctions(self.now_timestamp)
     
     def execute(self, context):
         user_data = self.fetch_api_data()
             
         self.log.info('Writing user_data to bronze layer')
-        self.s3Helper.write_to_s3(user_data, 'user_data', self.bucket_name)
+        self.s3Helper.write_to_s3(user_data, self.file_name, self.bucket_name)
         self.log.info('Object written successfully!')
 
         return user_data
