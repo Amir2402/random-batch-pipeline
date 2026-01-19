@@ -1,3 +1,5 @@
+import os
+
 BUCKETS = {
     'bronze_layer': 'bronze',
     'silver_layer': 'silver',
@@ -13,3 +15,10 @@ S3_ACCESS = {
 
 API_URL = 'https://randomuser.me/api/'
 USER_DATA = 'user_data'
+
+SLACK_API_KEY = os.getenv('SLACK_API_KEY')
+
+CHANNEL_ID = "all-airflow" 
+BOT_NAME = "airflow notifier"
+
+print(SLACK_API_KEY)

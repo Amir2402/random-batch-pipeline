@@ -80,7 +80,7 @@ class DataItem(BaseModel):
     id: str
     quantity: int
     unit_price: float
-    row_no: int
+    row_no: str
 
 class Root(BaseModel):
     data: List[DataItem]

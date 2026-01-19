@@ -1,6 +1,6 @@
 from airflow.decorators import dag
 from airflow.operators.python import PythonOperator
-from include.config.variables import BUCKETS, API_URL, USER_DATA
+from include.config.variables import BUCKETS, API_URL, USER_DATA, SLACK_API_KEY, CHANNEL_ID, BOT_NAME
 from plugins.operators.CreateBucketOperator import CreateBucketOperator
 from plugins.operators.bronze.LoadApiDataToBronze import LoadUserDataToBronze
 from plugins.operators.quality.ApiInputValidator import ApiInputValidator
@@ -45,9 +45,13 @@ def generate_dag():
         task_id = 'validate_user_data_schema',
         bucket_name = BUCKETS['bronze_layer'],
         file_name = USER_DATA,
-        now_timestamp = now
+        now_timestamp = now,
+        slack_api_key = SLACK_API_KEY,
+        channel_id = CHANNEL_ID,
+        bot_name = BOT_NAME,
+        message = 'Data source schema change!'
     )
-
+    
     [create_bronze, create_silver, create_gold] >> load_user_data_to_bronze >> validate_user_data_schema
 
 generate_dag() 
