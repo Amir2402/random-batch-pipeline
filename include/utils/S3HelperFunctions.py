@@ -1,6 +1,7 @@
 from include.config.variables import S3_ACCESS 
+from deltalake.writer import write_deltalake
 import boto3 
-import json 
+import json
 
 class S3HelperFunctions():
     def __init__(self, current_timestamp):
@@ -57,3 +58,21 @@ class S3HelperFunctions():
         file_content = object_to_read.get()['Body'].read().decode('utf-8')
 
         return json.loads(file_content)
+
+    def write_delta_to_s3(table_name, conn, layer): # not tested yet
+        storage_options = {
+            "AWS_ACCESS_KEY_ID": S3_ACCESS['aws_access_key'], 
+            "AWS_SECRET_ACCESS_KEY": S3_ACCESS['aws_secret_key'],
+            "AWS_ENDPOINT_URL": S3_ACCESS['s3_endpoint']
+        }
+        
+        df = conn.sql(f"SELECT * FROM {table_name};").arrow()
+        s3_path = f"s3://{layer}/{table_name}"
+
+        write_deltalake(
+            s3_path,
+            data = df, 
+            partition_by = ["year", "month", "day"],
+            storage_options = storage_options,
+            mode = 'append'
+        )

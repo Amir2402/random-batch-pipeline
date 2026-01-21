@@ -2,3 +2,6 @@
 boto3
 pydantic
 slack-sdk
+duckdb
+deltalake
+pyarrow
