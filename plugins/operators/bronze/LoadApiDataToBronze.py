@@ -28,7 +28,7 @@ class LoadUserDataToBronze(BaseOperator):
         user_data = []
         self.log.info('Fetching API user data')
         
-        for itr in range(1, 100):
+        for itr in range(1, 5):
             req = rq.get(self.api_url)
 
             try:

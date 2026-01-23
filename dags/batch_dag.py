@@ -4,6 +4,8 @@ from include.config.variables import BUCKETS, API_URL, USER_DATA, SLACK_API_KEY,
 from plugins.operators.CreateBucketOperator import CreateBucketOperator
 from plugins.operators.bronze.LoadApiDataToBronze import LoadUserDataToBronze
 from plugins.operators.quality.ApiInputValidator import ApiInputValidator
+from plugins.operators.quality.SlackNotifier import SlackNotifier
+from plugins.operators.silver.ProcessUserData import ProcessUserData
 from datetime import datetime 
 
 now = datetime.now()
@@ -44,14 +46,29 @@ def generate_dag():
     validate_user_data_schema = ApiInputValidator(
         task_id = 'validate_user_data_schema',
         bucket_name = BUCKETS['bronze_layer'],
-        file_name = USER_DATA,
         now_timestamp = now,
-        slack_api_key = SLACK_API_KEY,
+        file_name = USER_DATA
+    )
+
+    alert_slack_schema_change = SlackNotifier(
+        task_id = "alert_slack_schema_change",
+        trigger_rule = "one_failed",
         channel_id = CHANNEL_ID,
         bot_name = BOT_NAME,
-        message = 'Data source schema change!'
+        slack_message = f"API schema changed when ingesting source data! - {now}",
+        slack_token = SLACK_API_KEY,
+        now_timestamp = now
     )
     
+    process_silver_user_data = ProcessUserData(
+        task_id = 'process_silver_user_data',
+        bucket_name = BUCKETS['silver_layer'],
+        table_name = 'user_data',
+        now_timestamp = now 
+    )
+
     [create_bronze, create_silver, create_gold] >> load_user_data_to_bronze >> validate_user_data_schema
+    validate_user_data_schema >> alert_slack_schema_change
+    validate_user_data_schema >> process_silver_user_data
 
 generate_dag() 

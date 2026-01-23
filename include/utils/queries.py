@@ -22,13 +22,40 @@ def connect_duck_db_to_S3():
 
     return conn
 
-def select_json_from_bronze(table_name, year, month, day):
-    select_statement = f"""
+def read_json_from_bronze(table_name, year, month, day):
+    read_json = f"""
         CREATE TABLE {table_name} AS 
             SELECT 
-                UNNEST(data) AS data
+                UNNEST(data.results) AS results
             FROM 
-                read_json('s3://bronze/{table_name}/year={year}/month={month}/day={day}/*.json');
+                (
+                    SELECT 
+                        UNNEST(data) AS data
+                    FROM 
+                        read_json('s3://bronze/{table_name}/year={year}/month={month}/day={day}/*.json')
+                );
         """
     
-    return select_statement
+    return read_json
+
+user_transform_silver = """
+    CREATE TABLE silver_user_data AS 
+        SELECT
+            results.login.uuid AS user_id, 
+            results.name.first AS firstname, 
+            results.name.last AS lastname,
+            results.gender AS gender,
+            CAST(results.dob.date AS DATE) AS date_of_birth,
+            results.location.street.number AS street_number,
+            results.location.street.name AS street_name,
+            results.location.city AS city,
+            results.location.state AS state,
+            results.location.country AS country
+        FROM
+            user_data;
+"""
+
+conn = connect_duck_db_to_S3()
+
+conn.sql(read_json_from_bronze('user_data', 2026, 1, 17))
+conn.sql(user_transform_silver)
