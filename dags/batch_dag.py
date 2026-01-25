@@ -55,7 +55,6 @@ def generate_dag():
         trigger_rule = "one_failed",
         channel_id = CHANNEL_ID,
         bot_name = BOT_NAME,
-        slack_message = f"API schema changed when ingesting source data! - {now}",
         slack_token = SLACK_API_KEY,
         now_timestamp = now
     )

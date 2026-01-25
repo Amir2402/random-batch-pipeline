@@ -16,18 +16,24 @@ class LoadUserDataToBronze(BaseOperator):
         self.s3Helper = S3HelperFunctions(self.now_timestamp)
     
     def execute(self, context):
-        user_data = self.fetch_api_data()
+        try: 
+            user_data = self.fetch_api_data()
+            self.log.info('Writing user_data to bronze layer') 
+            self.s3Helper.write_to_s3(user_data, self.file_name, self.bucket_name)
+            self.log.info('Object written successfully!')
             
-        self.log.info('Writing user_data to bronze layer')
-        self.s3Helper.write_to_s3(user_data, self.file_name, self.bucket_name)
-        self.log.info('Object written successfully!')
+        except: 
+            self.log.info('Failed to ingest API user data!')
+            context['ti'].xcom_push(key = 'alert_message', value = f'Failed to ingest data on {self.now_timestamp}!')
+            self.log.info('Alerting ingestion failure on Slack!')
+            raise
 
         return user_data
 
     def fetch_api_data(self):
         user_data = []
         self.log.info('Fetching API user data')
-        
+
         for itr in range(1, 5):
             req = rq.get(self.api_url)
 

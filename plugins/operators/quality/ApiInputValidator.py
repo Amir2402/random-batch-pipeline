@@ -7,6 +7,8 @@ class ApiInputValidator(BaseOperator):
         super().__init__(**kwargs)
         self.bucket_name = bucket_name
         self.file_name = file_name
+        self.now_timestamp = now_timestamp
+
         self.s3Helper = S3HelperFunctions(now_timestamp)
     
     def execute(self, context):
@@ -17,5 +19,6 @@ class ApiInputValidator(BaseOperator):
             self.log.info('Data validation passed successfully!')
 
         except:
-            self.log.info('Alert API schema change!')
+            self.log.info('Alerting API schema change!')
+            context['ti'].xcom_push(key = 'alert_message', value = f'API schedma change on {self.now_timestamp}!')
             raise

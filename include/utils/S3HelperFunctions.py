@@ -59,7 +59,7 @@ class S3HelperFunctions():
 
         return json.loads(file_content)
 
-    def write_delta_to_s3(table_name, conn, layer): # not tested yet
+    def write_delta_to_s3(self, table_name, conn, layer): # not tested yet
         storage_options = {
             "AWS_ACCESS_KEY_ID": S3_ACCESS['aws_access_key'], 
             "AWS_SECRET_ACCESS_KEY": S3_ACCESS['aws_secret_key'],

@@ -50,12 +50,15 @@ user_transform_silver = """
             results.location.street.name AS street_name,
             results.location.city AS city,
             results.location.state AS state,
-            results.location.country AS country
+            results.location.country AS country,
+            YEAR(current_date()) AS year,
+            MONTH(current_date()) AS month, 
+            DAY(current_date()) AS day
         FROM
             user_data;
 """
 
-conn = connect_duck_db_to_S3()
+conn = connect_duck_db_to_S3() # for testing purpose
 
 conn.sql(read_json_from_bronze('user_data', 2026, 1, 17))
 conn.sql(user_transform_silver)
