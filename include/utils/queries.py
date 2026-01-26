@@ -38,6 +38,24 @@ def read_json_from_bronze(table_name, year, month, day):
     
     return read_json
 
+def read_delta_table_query(delta_table_name, duckdb_table_name, minio_access_key, minio_secret_key, bucket_name, current_year, current_month, current_day, minio_endpoint):
+    read_delta_table = f"""
+        CREATE SECRET secret_minio_{delta_table_name} (
+        TYPE S3,
+        ENDPOINT '{minio_endpoint}',
+        URL_STYLE 'path',
+        USE_SSL false,
+        KEY_ID {minio_access_key},
+        SECRET {minio_secret_key}
+        );
+        CREATE TABLE {duckdb_table_name} AS 
+            SELECT *
+            FROM delta_scan('s3://{bucket_name}/{delta_table_name}')
+            WHERE year = {current_year} AND month = {current_month} AND day = {current_day};
+    """ 
+
+    return read_delta_table
+
 user_transform_silver = """
     CREATE TABLE silver_user_data AS 
         SELECT
@@ -56,6 +74,28 @@ user_transform_silver = """
             DAY(current_date()) AS day
         FROM
             user_data;
+"""
+
+select_user_dimension = """
+    WITH duplicated_users AS (
+        SELECT
+            user_id,
+            firstname,
+            lastname,
+            gender,
+            row_number() OVER(PARTITION BY user_id) as rownum
+        FROM
+            user_dim
+    )
+    SELECT
+        user_id,
+        firstname,
+        lastname,
+        gender
+    FROM
+        duplicated_users
+    WHERE
+        rownum = 1;
 """
 
 conn = connect_duck_db_to_S3() # for testing purpose

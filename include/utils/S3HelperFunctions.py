@@ -1,5 +1,6 @@
 from include.config.variables import S3_ACCESS 
 from deltalake.writer import write_deltalake
+from include.utils.queries import read_delta_table_query
 import boto3 
 import json
 
@@ -8,6 +9,7 @@ class S3HelperFunctions():
         self.s3_endpoint = S3_ACCESS['s3_endpoint']
         self.aws_access_key = S3_ACCESS['aws_access_key']
         self.aws_secret_key = S3_ACCESS['aws_secret_key']
+        self.s3_endpoint_duckdb = S3_ACCESS['s3_endpoint_duckdb']
 
         self.current_year = current_timestamp.year 
         self.current_month = current_timestamp.month
@@ -76,3 +78,14 @@ class S3HelperFunctions():
             storage_options = storage_options,
             mode = 'append'
         )
+    
+    def read_delta_from_s3(self, delta_table_name, duckdb_table_name, conn, bucket_name):
+        conn.sql(read_delta_table_query(delta_table_name,
+                                        duckdb_table_name, 
+                                        self.aws_access_key,
+                                        self.aws_secret_key, 
+                                        bucket_name, 
+                                        self.current_year, 
+                                        self.current_month, 
+                                        self.current_day, 
+                                        self.s3_endpoint_duckdb))

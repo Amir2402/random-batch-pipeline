@@ -6,6 +6,7 @@ from plugins.operators.bronze.LoadApiDataToBronze import LoadUserDataToBronze
 from plugins.operators.quality.ApiInputValidator import ApiInputValidator
 from plugins.operators.quality.SlackNotifier import SlackNotifier
 from plugins.operators.silver.ProcessUserData import ProcessUserData
+from plugins.operators.gold.LoadUserDim import LoadUserDimension
 from datetime import datetime 
 
 now = datetime.now()
@@ -66,8 +67,17 @@ def generate_dag():
         now_timestamp = now 
     )
 
+    load_user_dim = LoadUserDimension(
+        task_id = 'load_user_dimension',
+        delta_table_name = 'silver_user_data',
+        duckdb_table_name = 'user_dim',
+        input_bucket_name = BUCKETS['silver_layer'], 
+        output_bucket_name = BUCKETS['gold_layer'], 
+        now_timestamp = now
+    )
+
     [create_bronze, create_silver, create_gold] >> load_user_data_to_bronze >> validate_user_data_schema
     validate_user_data_schema >> alert_slack_schema_change
-    validate_user_data_schema >> process_silver_user_data
+    validate_user_data_schema >> process_silver_user_data >> load_user_dim
 
 generate_dag() 
