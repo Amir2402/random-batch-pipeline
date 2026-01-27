@@ -77,28 +77,76 @@ user_transform_silver = """
 """
 
 select_user_dimension = """
-    WITH duplicated_users AS (
+    CREATE TABLE gold_user_dim AS
+        WITH duplicated_users AS (
+            SELECT
+                user_id,
+                firstname,
+                lastname,
+                gender,
+                row_number() OVER(PARTITION BY user_id) as rownum
+            FROM
+                user_dim
+        )
         SELECT
             user_id,
             firstname,
             lastname,
-            gender,
-            row_number() OVER(PARTITION BY user_id) as rownum
+            gender
         FROM
-            user_dim
-    )
-    SELECT
-        user_id,
-        firstname,
-        lastname,
-        gender
-    FROM
-        duplicated_users
-    WHERE
-        rownum = 1;
+            duplicated_users
+        WHERE
+            rownum = 1;
 """
 
-conn = connect_duck_db_to_S3() # for testing purpose
+select_location_dimension = """
+    CREATE TABLE gold_location_dim AS
+        WITH duplicated_locations AS (
+            SELECT
+                street_number,
+                street_name,
+                lastname,
+                city,
+                state,
+                country,
+                MD5(CONCAT(street_number, street_name, lastname, city, state, country)) as location_id,
+                row_number() OVER(PARTITION BY location_id) as rownum
+            FROM
+                location_dim
+        )
+        SELECT
+            location_id
+            street_number,
+            street_name,
+            lastname,
+            city,
+            state,
+            country,
+        FROM
+            duplicated_locations
+        WHERE
+            rownum = 1;
+"""
 
-conn.sql(read_json_from_bronze('user_data', 2026, 1, 17))
-conn.sql(user_transform_silver)
+select_date_dimension = """
+    CREATE TABLE gold_date_dim AS
+        WITH duplicated_date AS (
+            SELECT
+                year,
+                month,
+                day,
+                MD5(CONCAT(year, month, day)) as date_id,
+                row_number() OVER(PARTITION BY date_id) as rownum
+            FROM
+                date_dim
+        )
+        SELECT
+            date_id,
+            year,
+            month,
+            day
+        FROM
+            duplicated_date
+        WHERE
+            rownum = 1;
+"""

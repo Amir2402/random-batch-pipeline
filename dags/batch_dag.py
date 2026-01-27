@@ -1,12 +1,13 @@
 from airflow.decorators import dag
 from airflow.operators.python import PythonOperator
 from include.config.variables import BUCKETS, API_URL, USER_DATA, SLACK_API_KEY, CHANNEL_ID, BOT_NAME
+from include.utils.queries import select_user_dimension, select_location_dimension, select_date_dimension
 from plugins.operators.CreateBucketOperator import CreateBucketOperator
 from plugins.operators.bronze.LoadApiDataToBronze import LoadUserDataToBronze
 from plugins.operators.quality.ApiInputValidator import ApiInputValidator
 from plugins.operators.quality.SlackNotifier import SlackNotifier
 from plugins.operators.silver.ProcessUserData import ProcessUserData
-from plugins.operators.gold.LoadUserDim import LoadUserDimension
+from plugins.operators.gold.LoadDimToGold import LoadDimToGold
 from datetime import datetime 
 
 now = datetime.now()
@@ -67,17 +68,38 @@ def generate_dag():
         now_timestamp = now 
     )
 
-    load_user_dim = LoadUserDimension(
+    load_user_dim = LoadDimToGold(
         task_id = 'load_user_dimension',
         delta_table_name = 'silver_user_data',
         duckdb_table_name = 'user_dim',
         input_bucket_name = BUCKETS['silver_layer'], 
-        output_bucket_name = BUCKETS['gold_layer'], 
+        output_bucket_name = BUCKETS['gold_layer'],
+        query = select_user_dimension,
+        now_timestamp = now
+    )
+
+    load_location_dim = LoadDimToGold(
+        task_id = 'load_location_dimension',
+        delta_table_name = 'silver_user_data',
+        duckdb_table_name = 'location_dim',
+        input_bucket_name = BUCKETS['silver_layer'], 
+        output_bucket_name = BUCKETS['gold_layer'],
+        query = select_location_dimension,
+        now_timestamp = now
+    )
+
+    load_date_dim = LoadDimToGold(
+        task_id = 'load_date_dimension',
+        delta_table_name = 'silver_user_data',
+        duckdb_table_name = 'date_dim',
+        input_bucket_name = BUCKETS['silver_layer'], 
+        output_bucket_name = BUCKETS['gold_layer'],
+        query = select_date_dimension,
         now_timestamp = now
     )
 
     [create_bronze, create_silver, create_gold] >> load_user_data_to_bronze >> validate_user_data_schema
     validate_user_data_schema >> alert_slack_schema_change
-    validate_user_data_schema >> process_silver_user_data >> load_user_dim
+    validate_user_data_schema >> process_silver_user_data >> [load_user_dim, load_location_dim, load_date_dim]
 
 generate_dag() 
