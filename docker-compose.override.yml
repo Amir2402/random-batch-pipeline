@@ -6,12 +6,17 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: admin
-      MINIO_ROOT_PASSWORD: admin123
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=admin123
     volumes:
       - minio_data:/data
     networks:
       - airflow
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
     restart: always
     
   grafana:
@@ -20,5 +25,19 @@ services:
     ports:
       - '3000:3000'
 
+  trino:
+    image: trinodb/trino:latest
+    container_name: trino
+    ports:
+      - "8082:8080" 
+    volumes:
+      - ./docker/trino/catalog:/etc/trino/catalog 
+      - ./docker/trino/init-tables.sql:/etc/trino/init-tables.sql
+    depends_on:
+      - minio
+    networks:
+      - airflow
+    restart: always
+    
 volumes:
   minio_data:
