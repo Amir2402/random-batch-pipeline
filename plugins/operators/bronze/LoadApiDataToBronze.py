@@ -1,6 +1,7 @@
 from airflow.sdk import BaseOperator
 import requests as rq
 from datetime import datetime
+from include.utils.data import PRODUCTS
 from include.utils.S3HelperFunctions import S3HelperFunctions
 import random
 import json
@@ -31,27 +32,30 @@ class LoadUserDataToBronze(BaseOperator):
         return user_data
 
     def fetch_api_data(self):
-        user_data = []
+        sales_data = []
         self.log.info('Fetching API user data')
 
         for itr in range(1, 5):
             req = rq.get(self.api_url)
 
             try:
-                user_record = json.loads(req.content.decode())
+                sales_record = json.loads(req.content.decode())
+                product = random.choice(PRODUCTS)
 
                 user_id = str(uuid.uuid4())
                 quantity_bought = random.randint(1, 10)
-                unit_price = random.uniform(1, 100)
 
-                user_record['id'] = user_id
-                user_record['quantity'] = quantity_bought
-                user_record['unit_price'] = unit_price
-                user_record['row_no'] = itr
+                sales_record['id'] = user_id
+                sales_record['quantity'] = quantity_bought
+                sales_record['product_id'] = product['product_id']
+                sales_record['product_name'] = product['product_name']
+                sales_record['unit_price'] = product['unit_price']
+                sales_record['event_ts'] = str(datetime.now())
+                sales_record['row_no'] = itr
                 
-                user_data.append(user_record)
+                sales_data.append(sales_record)
 
             except:
                 self.log.info(f'Failed to fetch API data, item {itr}')
 
-        return user_data
+        return sales_data

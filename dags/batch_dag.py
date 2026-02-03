@@ -1,7 +1,6 @@
-from airflow.decorators import dag
-from airflow.operators.python import PythonOperator
-from include.config.variables import BUCKETS, API_URL, USER_DATA, SLACK_API_KEY, CHANNEL_ID, BOT_NAME
-from include.utils.queries import select_user_dimension, select_location_dimension, select_date_dimension
+from airflow.sdk import dag
+from include.config.variables import BUCKETS, API_URL, SALES_DATA, SLACK_API_KEY, CHANNEL_ID, BOT_NAME
+from include.utils.queries import select_user_dimension, select_location_dimension, select_date_dimension, select_product_dimension
 from plugins.operators.CreateBucketOperator import CreateBucketOperator
 from plugins.operators.bronze.LoadApiDataToBronze import LoadUserDataToBronze
 from plugins.operators.quality.ApiInputValidator import ApiInputValidator
@@ -40,7 +39,7 @@ def generate_dag():
     load_user_data_to_bronze = LoadUserDataToBronze(
         task_id = 'load_API_data_to_bronze',
         bucket_name = BUCKETS['bronze_layer'],
-        file_name = USER_DATA,
+        file_name = SALES_DATA,
         api_url = API_URL,
         now_timestamp = now
     )
@@ -49,7 +48,7 @@ def generate_dag():
         task_id = 'validate_user_data_schema',
         bucket_name = BUCKETS['bronze_layer'],
         now_timestamp = now,
-        file_name = USER_DATA
+        file_name = SALES_DATA
     )
 
     alert_slack_schema_change = SlackNotifier(
@@ -62,15 +61,15 @@ def generate_dag():
     )
     
     process_silver_user_data = ProcessUserData(
-        task_id = 'process_silver_user_data',
+        task_id = 'process_silver_sales_data',
         bucket_name = BUCKETS['silver_layer'],
-        table_name = 'user_data',
+        table_name = 'sales_data',
         now_timestamp = now 
     )
 
     load_user_dim = LoadDimToGold(
         task_id = 'load_user_dimension',
-        delta_table_name = 'silver_user_data',
+        delta_table_name = 'silver_sales_data',
         duckdb_table_name = 'user_dim',
         input_bucket_name = BUCKETS['silver_layer'], 
         output_bucket_name = BUCKETS['gold_layer'],
@@ -80,7 +79,7 @@ def generate_dag():
 
     load_location_dim = LoadDimToGold(
         task_id = 'load_location_dimension',
-        delta_table_name = 'silver_user_data',
+        delta_table_name = 'silver_sales_data',
         duckdb_table_name = 'location_dim',
         input_bucket_name = BUCKETS['silver_layer'], 
         output_bucket_name = BUCKETS['gold_layer'],
@@ -90,16 +89,26 @@ def generate_dag():
 
     load_date_dim = LoadDimToGold(
         task_id = 'load_date_dimension',
-        delta_table_name = 'silver_user_data',
+        delta_table_name = 'silver_sales_data',
         duckdb_table_name = 'date_dim',
         input_bucket_name = BUCKETS['silver_layer'], 
         output_bucket_name = BUCKETS['gold_layer'],
         query = select_date_dimension,
         now_timestamp = now
     )
+    
+    load_product_dim = LoadDimToGold(
+        task_id = 'load_product_dimension',
+        delta_table_name = 'silver_sales_data',
+        duckdb_table_name = 'product_dim',
+        input_bucket_name = BUCKETS['silver_layer'], 
+        output_bucket_name = BUCKETS['gold_layer'],
+        query = select_product_dimension,
+        now_timestamp = now
+    )
 
     [create_bronze, create_silver, create_gold] >> load_user_data_to_bronze >> validate_user_data_schema
     validate_user_data_schema >> alert_slack_schema_change
-    validate_user_data_schema >> process_silver_user_data >> [load_user_dim, load_location_dim, load_date_dim]
+    validate_user_data_schema >> process_silver_user_data >> [load_user_dim, load_location_dim, load_date_dim, load_product_dim]
 
 generate_dag() 

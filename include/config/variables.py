@@ -15,7 +15,7 @@ S3_ACCESS = {
 }
 
 API_URL = os.getenv('API_URL')
-USER_DATA = os.getenv('USER_DATA')
+SALES_DATA = os.getenv('SALES_DATA')
 
 SLACK_API_KEY = os.getenv('SLACK_API_KEY')
 

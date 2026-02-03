@@ -1,6 +1,6 @@
 from typing import List, Optional, Union
 from pydantic import BaseModel
-
+from datetime import datetime
 
 class Name(BaseModel):
     title: str
@@ -79,7 +79,10 @@ class DataItem(BaseModel):
     info: Info
     id: str
     quantity: int
+    product_id: str
+    product_name: str
     unit_price: float
+    event_ts: datetime
     row_no: int
 
 class Root(BaseModel):

@@ -1,6 +1,6 @@
 from airflow.sdk import BaseOperator
 from include.utils.S3HelperFunctions import S3HelperFunctions
-from include.utils.queries import connect_duck_db_to_S3, read_json_from_bronze, user_transform_silver
+from include.utils.queries import connect_duck_db_to_S3, read_json_from_bronze, sales_transform_silver
 from include.utils.S3HelperFunctions import S3HelperFunctions
 
 class ProcessUserData(BaseOperator):
@@ -18,13 +18,12 @@ class ProcessUserData(BaseOperator):
         self.month = self.now_timestamp.month
         self.year = self.now_timestamp.year
 
-    
     def execute(self, context):
         self.log.info('Reading user data from bronze layer!')
         self.conn.sql(read_json_from_bronze(self.table_name, self.year, self.month, self.day))
         
         self.log.info('Transforming user data!')
-        self.conn.sql(user_transform_silver)
+        self.conn.sql(sales_transform_silver)
 
         self.log.info('Writing data to silver layer in Delta format!')
         self.S3Helper.write_delta_to_s3(f"silver_{self.table_name}", self.conn, self.bucket_name)

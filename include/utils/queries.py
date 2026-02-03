@@ -56,8 +56,8 @@ def read_delta_table_query(delta_table_name, duckdb_table_name, minio_access_key
 
     return read_delta_table
 
-user_transform_silver = """
-    CREATE TABLE silver_user_data AS 
+sales_transform_silver = """
+    CREATE TABLE silver_sales_data AS 
         SELECT
             results.login.uuid AS user_id, 
             results.name.first AS firstname, 
@@ -69,11 +69,15 @@ user_transform_silver = """
             results.location.city AS city,
             results.location.state AS state,
             results.location.country AS country,
-            YEAR(current_date()) AS year,
-            MONTH(current_date()) AS month, 
-            DAY(current_date()) AS day
+            results.product_id AS product_id,
+            results.product_name AS product_name,
+            results.unit_price AS unit_price,
+            CAST(results.event_ts AS DATE) AS event_ts,
+            YEAR(event_ts) AS year,
+            MONTH(event_ts) AS month, 
+            DAY(event_ts) AS day
         FROM
-            user_data;
+            sales_data;
 """
 
 select_user_dimension = """
@@ -147,6 +151,25 @@ select_date_dimension = """
             day
         FROM
             duplicated_date
+        WHERE
+            rownum = 1;
+"""
+
+select_product_dimension = """
+    CREATE TABLE gold_product_dim AS
+        WITH duplicated_product AS (
+            SELECT 
+                product_id,
+                product_name,
+                unit_price
+                row_number() OVER(PARTITION BY date_id) as rownum
+            FROM
+                product_dim
+        )
+        SELECT
+            *
+        FROM
+            duplicated_product
         WHERE
             rownum = 1;
 """
