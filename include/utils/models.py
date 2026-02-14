@@ -1,89 +1,80 @@
-from typing import List, Optional, Union
-from pydantic import BaseModel
-from datetime import datetime
+from pydantic import BaseModel, EmailStr, IPvAnyAddress, HttpUrl, field_validator
+from typing import List
+from uuid import UUID
+from datetime import date
+from typing import Optional
 
-class Name(BaseModel):
-    title: str
-    first: str
-    last: str
 
-class Street(BaseModel):
-    number: int
-    name: str
-
-class Coordinates(BaseModel):
-    latitude: str
-    longitude: str
-
-class Timezone(BaseModel):
-    offset: str
-    description: str
-
-class Location(BaseModel):
-    street: Street
-    city: str
-    state: str
-    country: str
-    postcode: Union[int, str]
-    coordinates: Coordinates
-    timezone: Timezone
-
-class Login(BaseModel):
-    uuid: str
+class sales_record(BaseModel):
+    id: UUID
     username: str
     password: str
-    salt: str
+
+    email: EmailStr
+    company_email: Optional[EmailStr]
+
+    name: str
+    first_name: str
+    last_name: str
+    full_name: str
+    prefix: Optional[str]
+    suffix: Optional[str]
+
+    phone: str
+    cell: Optional[str]
+
+    address: str
+    street_address: str
+    city: str
+    state: str
+    postal_code: str
+    country: str
+
+    latitude: float
+    longitude: float
+    timezone: str
+
+    dob: date
+    age: int
+    gender: str
+
+    job: str
+    company: str
+
+    ssn: str
+    credit_card: str
+    credit_card_provider: str
+    iban: str
+
+    ipv4: IPvAnyAddress
+    ipv6: IPvAnyAddress
+    mac_address: str
+    user_agent: str
+
+    url: HttpUrl
+    domain: str
+    picture: HttpUrl
+    avatar: HttpUrl
+
+    uuid: UUID
     md5: str
     sha1: str
     sha256: str
+    locale: str
 
-class Dob(BaseModel):
-    date: str
-    age: int
-
-class Registered(BaseModel):
-    date: str
-    age: int
-
-class Id(BaseModel):
-    name: str
-    value: Optional[str]
-
-class Picture(BaseModel):
-    large: str
-    medium: str
-    thumbnail: str
-
-class Result(BaseModel):
-    gender: str
-    name: Name
-    location: Location
-    email: str
-    login: Login
-    dob: Dob
-    registered: Registered
-    phone: str
-    cell: str
-    id: Id
-    picture: Picture
-    nat: str
-
-class Info(BaseModel):
-    seed: str
-    results: int
-    page: int
-    version: str
-
-class DataItem(BaseModel):
-    results: List[Result]
-    info: Info
-    id: str
     quantity: int
     product_id: str
     product_name: str
     unit_price: float
-    event_ts: datetime
-    row_no: int
+    event_ts: str
 
-class Root(BaseModel):
-    data: List[DataItem]
+
+class sales_data(BaseModel):
+    sales_data: List[sales_record]
+
+    @field_validator("sales_data")
+    def validate_results(cls, v):
+        if len(v) == 0:
+            raise ValueError("API is returning empty list!") 
+        return v 
+

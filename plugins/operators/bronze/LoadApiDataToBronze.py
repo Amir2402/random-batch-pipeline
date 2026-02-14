@@ -8,19 +8,20 @@ import json
 import uuid
 
 class LoadUserDataToBronze(BaseOperator): 
-    def __init__(self, bucket_name, api_url, now_timestamp, file_name, **kwargs): 
+    def __init__(self, bucket_name, api_url, api_key, now_timestamp, file_name, **kwargs): 
         super().__init__(**kwargs)
         self.bucket_name = bucket_name
         self.api_url = api_url
+        self.api_key = api_key
         self.now_timestamp = now_timestamp
         self.file_name = file_name
         self.s3Helper = S3HelperFunctions(self.now_timestamp)
     
     def execute(self, context):
         try: 
-            user_data = self.fetch_api_data()
-            self.log.info('Writing user_data to bronze layer') 
-            self.s3Helper.write_to_s3(user_data, self.file_name, self.bucket_name)
+            sales_data = self.fetch_api_data()
+            self.log.info('Writing sales_data to bronze layer') 
+            self.s3Helper.write_to_s3(sales_data, self.file_name, self.bucket_name)
             self.log.info('Object written successfully!')
             
         except: 
@@ -29,33 +30,28 @@ class LoadUserDataToBronze(BaseOperator):
             self.log.info('Alerting ingestion failure on Slack!')
             raise
 
-        return user_data
-
     def fetch_api_data(self):
-        sales_data = []
         self.log.info('Fetching API user data')
 
-        for itr in range(1, 5):
-            req = rq.get(self.api_url)
+        try:
+            headers = {
+                "X-Api-Key": self.api_key
+            }
+            req = rq.get(self.api_url, headers = headers)
+            sales_data = json.loads(req.content.decode())
+            
+            product = random.choice(PRODUCTS)
+            quantity_bought = random.randint(1, 10)
 
-            try:
-                sales_record = json.loads(req.content.decode())
-                product = random.choice(PRODUCTS)
-
-                user_id = str(uuid.uuid4())
-                quantity_bought = random.randint(1, 10)
-
-                sales_record['id'] = user_id
+            for sales_record in sales_data:
                 sales_record['quantity'] = quantity_bought
                 sales_record['product_id'] = product['product_id']
                 sales_record['product_name'] = product['product_name']
                 sales_record['unit_price'] = product['unit_price']
                 sales_record['event_ts'] = str(datetime.now())
-                sales_record['row_no'] = itr
-                
-                sales_data.append(sales_record)
-
-            except:
-                self.log.info(f'Failed to fetch API data, item {itr}')
+            
+        except:
+            self.log.info(f'Failed to fetch API data')
+            raise
 
         return sales_data

@@ -14,10 +14,12 @@ S3_ACCESS = {
     's3_endpoint_duckdb': os.getenv('S3_ENDPOINT_DUCKDB')
 }
 
-API_URL = os.getenv('API_URL')
 SALES_DATA = os.getenv('SALES_DATA')
 
 SLACK_API_KEY = os.getenv('SLACK_API_KEY')
 
 CHANNEL_ID = os.getenv('CHANNEL_ID')
 BOT_NAME = "airflow notifier"
+
+RANDOM_USER_API = os.getenv('RANDOM_USER_API')
+RANDOM_USER_API_KEY = os.getenv('RANDOM_USER_API_KEY')

@@ -38,7 +38,7 @@ class S3HelperFunctions():
         s3 = self.s3_client()
         
         object_key = f"{base_filename}/year={self.current_year}/month={self.current_month}/day={self.current_day}/hour={self.current_hour}.json"
-        object_body = {"data": object_to_store}
+        object_body = {"sales_data": object_to_store}
 
         try:
             s3.put_object(

@@ -26,16 +26,10 @@ def read_json_from_bronze(table_name, year, month, day):
     read_json = f"""
         CREATE TABLE {table_name} AS 
             SELECT 
-                UNNEST(data.results) AS results
+                UNNEST(sales_data) as sales_data
             FROM 
-                (
-                    SELECT 
-                        UNNEST(data) AS data
-                    FROM 
-                        read_json('s3://bronze/{table_name}/year={year}/month={month}/day={day}/*.json')
-                );
+                read_json('s3://bronze/{table_name}/year={year}/month={month}/day={day}/*.json');
         """
-    
     return read_json
 
 def read_delta_table_query(delta_table_name, duckdb_table_name, minio_access_key, minio_secret_key, bucket_name, current_year, current_month, current_day, minio_endpoint):
@@ -59,23 +53,29 @@ def read_delta_table_query(delta_table_name, duckdb_table_name, minio_access_key
 sales_transform_silver = """
     CREATE TABLE silver_sales_data AS 
         SELECT
-            results.login.uuid AS user_id, 
-            results.name.first AS firstname, 
-            results.name.last AS lastname,
-            results.gender AS gender,
-            CAST(results.dob.date AS DATE) AS date_of_birth,
-            results.location.street.number AS street_number,
-            results.location.street.name AS street_name,
-            results.location.city AS city,
-            results.location.state AS state,
-            results.location.country AS country,
-            results.product_id AS product_id,
-            results.product_name AS product_name,
-            results.unit_price AS unit_price,
-            CAST(results.event_ts AS DATE) AS event_ts,
-            YEAR(event_ts) AS year,
-            MONTH(event_ts) AS month, 
-            DAY(event_ts) AS day
+            sales_data.id AS user_id, 
+            sales_data.first_name AS firstname, 
+            sales_data.last_name AS lastname,
+            sales_data.gender AS gender,
+            sales_data.job AS job,
+            sales_data.ipv4 as ip_address,
+            CAST(sales_data.dob AS DATE) AS date_of_birth,
+            sales_data.address AS address,
+            sales_data.street_address AS street_address,
+            sales_data.city AS city,
+            sales_data.state AS state,
+            sales_data.postal_code AS postal_code,
+            sales_data.country as country,
+            sales_data.product_id AS product_id,
+            sales_data.product_name AS product_name,
+            sales_data.unit_price AS unit_price,
+            sales_data.quantity AS quantity,
+            CAST(sales_data.event_ts AS DATE) AS event_ts,
+            YEAR(sales_data.event_ts) AS year,
+            MONTH(sales_data.event_ts) AS month, 
+            DAY(sales_data.event_ts) AS day,
+            MD5(CONCAT(address, street_address, postal_code, city, state, country)) as location_id,
+            MD5(CONCAT(year, month, day)) as date_id
         FROM
             sales_data;
 """
@@ -88,15 +88,21 @@ select_user_dimension = """
                 firstname,
                 lastname,
                 gender,
+                job,
+                ip_address,
+                date_of_birth,
                 row_number() OVER(PARTITION BY user_id) as rownum
             FROM
                 user_dim
         )
         SELECT
             user_id,
-            firstname,
-            lastname,
-            gender
+                firstname,
+                lastname,
+                gender,
+                job,
+                ip_address,
+                date_of_birth
         FROM
             duplicated_users
         WHERE
@@ -107,25 +113,25 @@ select_location_dimension = """
     CREATE TABLE gold_location_dim AS
         WITH duplicated_locations AS (
             SELECT
-                street_number,
-                street_name,
-                lastname,
+                location_id,
+                address,
+                street_address,
                 city,
                 state,
                 country,
-                MD5(CONCAT(street_number, street_name, lastname, city, state, country)) as location_id,
+                postal_code,
                 row_number() OVER(PARTITION BY location_id) as rownum
             FROM
                 location_dim
         )
         SELECT
-            location_id
-            street_number,
-            street_name,
-            lastname,
+            location_id,
+            address,
+            street_address,
             city,
             state,
             country,
+            postal_code,
         FROM
             duplicated_locations
         WHERE
@@ -136,10 +142,10 @@ select_date_dimension = """
     CREATE TABLE gold_date_dim AS
         WITH duplicated_date AS (
             SELECT
+                date_id,
                 year,
                 month,
                 day,
-                MD5(CONCAT(year, month, day)) as date_id,
                 row_number() OVER(PARTITION BY date_id) as rownum
             FROM
                 date_dim
@@ -161,8 +167,8 @@ select_product_dimension = """
             SELECT 
                 product_id,
                 product_name,
-                unit_price
-                row_number() OVER(PARTITION BY date_id) as rownum
+                unit_price,
+                row_number() OVER(PARTITION BY product_id) as rownum
             FROM
                 product_dim
         )
@@ -172,4 +178,27 @@ select_product_dimension = """
             duplicated_product
         WHERE
             rownum = 1;
+"""
+
+select_sales_fact = """
+    CREATE TABLE gold_sales_fact AS 
+        WITH duplicated_fact AS (
+            SELECT 
+                user_id,
+                product_id,
+                date_id,
+                location_id,
+                quantity,
+                unit_price,
+                unit_price * quantity AS amount_spent,
+                row_number() OVER(PARTITION BY user_id, product_id, date_id, location_id) as rownum
+            FROM
+                sales_fact
+        )
+        SELECT 
+            *
+        FROM
+            duplicated_fact
+        WHERE
+            rownum = 1; 
 """

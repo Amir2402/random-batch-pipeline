@@ -21,4 +21,15 @@ CALL delta.system.register_table(
   table_location => 's3://gold/date_dim'
 );
 
+CALL delta.system.register_table(
+  schema_name => 'analytics',
+  table_name  => 'product_dim',
+  table_location => 's3://gold/date_dim'
+);
+
+CALL delta.system.register_table(
+  schema_name => 'analytics',
+  table_name  => 'sales_fact',
+  table_location => 's3://gold/date_dim'
+);
 SHOW TABLES;
