@@ -19,9 +19,9 @@ class LoadTableToGold(BaseOperator):
         self.log.info(f'Reading {self.delta_table_name} data from delta tables!')
         self.S3Helper.read_delta_from_s3(self.delta_table_name, self.duckdb_table_name,
                                          self.conn, self.input_bucket)
-        
+
         self.log.info(f'transforming {self.duckdb_table_name} table!')
         self.conn.sql(self.query)
 
-        self.log.info(f'Loading {self.duckdb_table_name} table into gold layer!')
-        self.S3Helper.write_delta_to_s3(self.duckdb_table_name, self.conn, self.output_bucket)
+        self.log.info(f'Loading gold_{self.duckdb_table_name} table into gold layer!')
+        self.S3Helper.write_delta_to_s3(f"gold_{self.duckdb_table_name}", self.conn, self.output_bucket)

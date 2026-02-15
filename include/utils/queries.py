@@ -91,6 +91,9 @@ select_user_dimension = """
                 job,
                 ip_address,
                 date_of_birth,
+                year,
+                month,
+                day,
                 row_number() OVER(PARTITION BY user_id) as rownum
             FROM
                 user_dim
@@ -102,7 +105,10 @@ select_user_dimension = """
                 gender,
                 job,
                 ip_address,
-                date_of_birth
+                date_of_birth,
+                year,
+                month,
+                day
         FROM
             duplicated_users
         WHERE
@@ -120,6 +126,9 @@ select_location_dimension = """
                 state,
                 country,
                 postal_code,
+                year,
+                month,
+                day,
                 row_number() OVER(PARTITION BY location_id) as rownum
             FROM
                 location_dim
@@ -132,6 +141,9 @@ select_location_dimension = """
             state,
             country,
             postal_code,
+            year,
+            month,
+            day
         FROM
             duplicated_locations
         WHERE
@@ -142,10 +154,10 @@ select_date_dimension = """
     CREATE TABLE gold_date_dim AS
         WITH duplicated_date AS (
             SELECT
-                date_id,
-                year,
-                month,
-                day,
+                date_id AS date_id,
+                year AS year,
+                month AS month,
+                day AS day,
                 row_number() OVER(PARTITION BY date_id) as rownum
             FROM
                 date_dim
@@ -168,12 +180,20 @@ select_product_dimension = """
                 product_id,
                 product_name,
                 unit_price,
+                year,
+                month,
+                day,
                 row_number() OVER(PARTITION BY product_id) as rownum
             FROM
                 product_dim
         )
         SELECT
-            *
+            product_id,
+            product_name,
+            unit_price,
+            year,
+            month,
+            day
         FROM
             duplicated_product
         WHERE
@@ -191,12 +211,24 @@ select_sales_fact = """
                 quantity,
                 unit_price,
                 unit_price * quantity AS amount_spent,
+                year,
+                month,
+                day,
                 row_number() OVER(PARTITION BY user_id, product_id, date_id, location_id) as rownum
             FROM
                 sales_fact
         )
         SELECT 
-            *
+            user_id,
+            product_id,
+            date_id,
+            location_id,
+            quantity,
+            unit_price,
+            unit_price * quantity AS amount_spent,
+            year,
+            month,
+            day
         FROM
             duplicated_fact
         WHERE
