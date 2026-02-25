@@ -11,3 +11,4 @@ webserver_config.py
 airflow.cfg
 airflow.db
 tests/test_queries.py
+tests/quality_test.py

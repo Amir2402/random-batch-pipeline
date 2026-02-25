@@ -23,3 +23,5 @@ BOT_NAME = "airflow notifier"
 
 RANDOM_USER_API = os.getenv('RANDOM_USER_API')
 RANDOM_USER_API_KEY = os.getenv('RANDOM_USER_API_KEY')
+
+SODACL_PATH = "inlclude/soda/checks.yml"

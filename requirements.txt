@@ -5,3 +5,4 @@ slack-sdk
 duckdb
 deltalake
 pyarrow
+great-expectations==0.17.21

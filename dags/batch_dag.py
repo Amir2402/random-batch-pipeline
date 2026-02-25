@@ -4,6 +4,7 @@ from include.utils.queries import select_user_dimension, select_location_dimensi
 from plugins.operators.CreateBucketOperator import CreateBucketOperator
 from plugins.operators.bronze.LoadApiDataToBronze import LoadUserDataToBronze
 from plugins.operators.quality.ApiInputValidator import ApiInputValidator
+from plugins.operators.quality.QualityChecks import QualityChecks 
 from plugins.operators.quality.SlackNotifier import SlackNotifier
 from plugins.operators.silver.ProcessUserData import ProcessUserData
 from plugins.operators.gold.LoadTableToGold import LoadTableToGold
@@ -118,8 +119,17 @@ def generate_dag():
         now_timestamp = now
     )
 
+    silver_layer_quality_checks = QualityChecks(
+        task_id = 'quality_checks_silver',
+        delta_table_name = 'silver_sales_data',
+        duckdb_table_name = 'silver_data', 
+        input_bucket_name = BUCKETS['silver_layer'], 
+        now_timestamp = now
+    )
+
     [create_bronze, create_silver, create_gold] >> load_user_data_to_bronze >> validate_user_data_schema
     validate_user_data_schema >> alert_slack_schema_change
-    validate_user_data_schema >> process_silver_user_data >> [load_user_dim, load_location_dim, load_date_dim, load_product_dim, load_sales_fact]
+    validate_user_data_schema >> process_silver_user_data >>  silver_layer_quality_checks
+    silver_layer_quality_checks >> [load_user_dim, load_location_dim, load_date_dim, load_product_dim, load_sales_fact]
 
 generate_dag() 
