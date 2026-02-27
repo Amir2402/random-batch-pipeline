@@ -3,9 +3,9 @@ import requests as rq
 from datetime import datetime
 from include.utils.data import PRODUCTS
 from include.utils.S3HelperFunctions import S3HelperFunctions
+from include.utils.NotifySlack import notify_slack
 import random
 import json
-import uuid
 
 class LoadUserDataToBronze(BaseOperator): 
     def __init__(self, bucket_name, api_url, api_key, now_timestamp, file_name, **kwargs): 
@@ -26,7 +26,10 @@ class LoadUserDataToBronze(BaseOperator):
             
         except: 
             self.log.info('Failed to ingest API user data!')
-            context['ti'].xcom_push(key = 'alert_message', value = f'Failed to ingest data on {self.now_timestamp}!')
+            notify_slack(
+                self.now_timestamp,
+                f'Failed to ingest data on {self.now_timestamp}!'
+            )
             self.log.info('Alerting ingestion failure on Slack!')
             raise
 

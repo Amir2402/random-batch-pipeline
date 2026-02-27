@@ -5,7 +5,6 @@ from plugins.operators.CreateBucketOperator import CreateBucketOperator
 from plugins.operators.bronze.LoadApiDataToBronze import LoadUserDataToBronze
 from plugins.operators.quality.ApiInputValidator import ApiInputValidator
 from plugins.operators.quality.QualityChecks import QualityChecks 
-from plugins.operators.quality.SlackNotifier import SlackNotifier
 from plugins.operators.silver.ProcessUserData import ProcessUserData
 from plugins.operators.gold.LoadTableToGold import LoadTableToGold
 from datetime import datetime 
@@ -51,15 +50,6 @@ def generate_dag():
         bucket_name = BUCKETS['bronze_layer'],
         now_timestamp = now,
         file_name = SALES_DATA
-    )
-
-    alert_slack_schema_change = SlackNotifier(
-        task_id = "alert_slack_schema_change",
-        trigger_rule = "one_failed",
-        channel_id = CHANNEL_ID,
-        bot_name = BOT_NAME,
-        slack_token = SLACK_API_KEY,
-        now_timestamp = now
     )
     
     process_silver_user_data = ProcessUserData(
@@ -128,7 +118,6 @@ def generate_dag():
     )
 
     [create_bronze, create_silver, create_gold] >> load_user_data_to_bronze >> validate_user_data_schema
-    validate_user_data_schema >> alert_slack_schema_change
     validate_user_data_schema >> process_silver_user_data >>  silver_layer_quality_checks
     silver_layer_quality_checks >> [load_user_dim, load_location_dim, load_date_dim, load_product_dim, load_sales_fact]
 

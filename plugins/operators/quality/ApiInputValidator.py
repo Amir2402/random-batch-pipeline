@@ -1,6 +1,8 @@
 from airflow.sdk import BaseOperator
+from pydantic import ValidationError
 from include.utils.S3HelperFunctions import S3HelperFunctions
 from include.utils.models import sales_data
+from include.utils.NotifySlack import notify_slack
 
 class ApiInputValidator(BaseOperator):
     def __init__(self, bucket_name, now_timestamp, file_name, **kwargs): 
@@ -18,7 +20,13 @@ class ApiInputValidator(BaseOperator):
             parsed = sales_data(**data_to_validate)
             self.log.info('Data validation passed successfully!')
 
+        except ValidationError:
+            self.log.info(f'Alerting slack on api schema change')
+            notify_slack(
+                self.now_timestamp,
+                f'Api schema change - {self.now_timestamp}'
+            )
+        
         except:
-            self.log.info('Alerting API schema change!')
-            context['ti'].xcom_push(key = 'alert_message', value = f'API schedma change on {self.now_timestamp}!')
+            self.log.error(f'An error occured!')
             raise
