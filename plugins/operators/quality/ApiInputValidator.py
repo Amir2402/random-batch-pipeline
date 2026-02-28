@@ -28,5 +28,10 @@ class ApiInputValidator(BaseOperator):
             )
         
         except:
-            self.log.error(f'An error occured!')
+            message = "Error occured while validating API schema!"
+            self.log.error(f'{message}')
+            notify_slack(
+                self.now_timestamp,
+                f'{message} - {self.now_timestamp}'
+            )
             raise

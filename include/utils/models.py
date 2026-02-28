@@ -62,7 +62,7 @@ class sales_record(BaseModel):
     sha256: str
     locale: str
 
-    quantity: str
+    quantity: int
     product_id: str
     product_name: str
     unit_price: float
