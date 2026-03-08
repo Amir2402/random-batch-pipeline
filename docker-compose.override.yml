@@ -8,6 +8,7 @@ services:
     environment:
       - MINIO_ROOT_USER=admin
       - MINIO_ROOT_PASSWORD=admin123
+      - MINIO_PROMETHEUS_AUTH_TYPE=public
     volumes:
       - minio_data:/data
     networks:
@@ -22,11 +23,18 @@ services:
   grafana:
     image: grafana_batch
     container_name: grafana
+    depends_on:
+      - prometheus
     ports:
       - '3000:3000'
+    networks:
+      - airflow
+    restart: always
+    volumes:
+      - grafana-storage:/var/lib/grafana 
 
   trino:
-    image: trinodb/trino:latest
+    image: trino_batch
     container_name: trino
     ports:
       - "8082:8080" 
@@ -38,6 +46,39 @@ services:
     networks:
       - airflow
     restart: always
-    
+  
+  prometheus:
+    image: prometheus_batch
+    container_name: prometheus
+    ports:
+      - '9090:9090'
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - airflow
+    restart: always
+
+  statsd-exporter:
+    image: statsd-exporter 
+    container_name: statsd-exporter
+    ports:
+      - "9102:9102" 
+      - "9125:9125"
+    volumes:
+      - ./docker/statsd/mappings.yml:/tmp/mappings.yml
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9102/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    command:
+      - '--statsd.mapping-config=/tmp/mappings.yml'
+      - '--statsd.listen-udp=:9125'
+      - '--web.listen-address=:9102'
+    restart: always
+    networks:
+      - airflow
+  
 volumes:
   minio_data:
+  grafana-storage: 

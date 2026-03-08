@@ -6,3 +6,4 @@ duckdb
 deltalake
 pyarrow
 great-expectations==0.17.21
+apache-airflow[otel]
