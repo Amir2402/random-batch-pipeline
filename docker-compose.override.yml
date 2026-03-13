@@ -31,6 +31,7 @@ services:
       - airflow
     restart: always
     volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning
       - grafana-storage:/var/lib/grafana 
 
   trino:
