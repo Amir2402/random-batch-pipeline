@@ -1,15 +1,20 @@
-from airflow.sdk import BaseOperator
 from include.utils.S3HelperFunctions import S3HelperFunctions
-from include.utils.queries import connect_duck_db_to_S3, read_json_from_bronze, sales_transform_silver
+from include.utils.queries import read_json_from_bronze, sales_transform_silver
 from include.utils.S3HelperFunctions import S3HelperFunctions
+from airflow.providers.openlineage.extractors.base import OperatorLineage
+from openlineage.client.generated.base import Dataset
+from plugins.operators.BaseOperatorWithLineage import BaseOperatorWithLineage
 
-class ProcessUserData(BaseOperator):
-    def __init__(self, bucket_name, table_name, now_timestamp, **kwargs): 
-        super().__init__(**kwargs)
-
+class ProcessUserData(BaseOperatorWithLineage):
+    def __init__(self, bucket_name, table_name, now_timestamp, lineage_input, lineage_output, conn, **kwargs): 
+        super().__init__(
+            lineage_input = lineage_input,
+            lineage_output = lineage_output,
+            **kwargs
+        )
         self.S3Helper = S3HelperFunctions(now_timestamp)
 
-        self.conn = connect_duck_db_to_S3()
+        self.conn = conn
         self.bucket_name = bucket_name 
         self.table_name = table_name
         
@@ -27,4 +32,3 @@ class ProcessUserData(BaseOperator):
 
         self.log.info('Writing data to silver layer in Delta format!')
         self.S3Helper.write_delta_to_s3(f"silver_{self.table_name}", self.conn, self.bucket_name)
-

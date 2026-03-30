@@ -5,14 +5,14 @@ from include.utils.NotifySlack import notify_slack
 import great_expectations as ge
 
 class QualityChecks(BaseOperator):
-    def __init__(self, delta_table_name, duckdb_table_name, input_bucket_name, now_timestamp, **kwargs):
+    def __init__(self, delta_table_name, duckdb_table_name, input_bucket_name, now_timestamp, conn, **kwargs):
         super().__init__(**kwargs)
         self.delta_table_name = delta_table_name
         self.duckdb_table_name = duckdb_table_name
         self.input_bucket_name = input_bucket_name
         self.now_timestamp = now_timestamp
 
-        self.conn = connect_duck_db_to_S3()  
+        self.conn = conn 
         self.S3Helper = S3HelperFunctions(self.now_timestamp) 
     
     def execute(self, context):

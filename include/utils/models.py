@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr, IPvAnyAddress, HttpUrl, field_validator
+from openlineage.common.dataset import Source, Dataset
 from typing import List
 from uuid import UUID
 from datetime import date
@@ -77,4 +78,3 @@ class sales_data(BaseModel):
         if len(v) == 0:
             raise ValueError("API is returning empty list!") 
         return v 
-

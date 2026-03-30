@@ -1,5 +1,6 @@
-from airflow.decorators import dag
-from include.config.variables import BUCKETS, RANDOM_USER_API, RANDOM_USER_API_KEY, SALES_DATA, SLACK_API_KEY, CHANNEL_ID, BOT_NAME
+from airflow.sdk import dag
+from include.utils.queries import connect_duck_db_to_S3
+from include.config.variables import BUCKETS, RANDOM_USER_API, RANDOM_USER_API_KEY, SALES_DATA
 from include.utils.queries import select_user_dimension, select_location_dimension, select_date_dimension, select_product_dimension, select_sales_fact
 from plugins.operators.CreateBucketOperator import CreateBucketOperator
 from plugins.operators.bronze.LoadApiDataToBronze import LoadUserDataToBronze
@@ -18,6 +19,8 @@ now = datetime.now()
     schedule = '@hourly'
 )
 def generate_dag():
+    conn = connect_duck_db_to_S3()
+
     create_bronze = CreateBucketOperator(
         task_id = "create_bronze_layer",
         bucket_name = BUCKETS['bronze_layer'],
@@ -42,7 +45,8 @@ def generate_dag():
         file_name = SALES_DATA,
         api_url = RANDOM_USER_API,
         api_key = RANDOM_USER_API_KEY,
-        now_timestamp = now
+        now_timestamp = now,
+        lineage_output={"bucket": BUCKETS["bronze_layer"], "name": SALES_DATA}
     )
 
     validate_user_data_schema = ApiInputValidator(
@@ -56,7 +60,10 @@ def generate_dag():
         task_id = 'process_silver_sales_data',
         bucket_name = BUCKETS['silver_layer'],
         table_name = 'sales_data',
-        now_timestamp = now 
+        now_timestamp = now,
+        conn = conn,
+        lineage_input = {"bucket": BUCKETS["bronze_layer"], "name": SALES_DATA},
+        lineage_output = {"bucket": BUCKETS["silver_layer"], "name": "silver_sales_data"}
     )
 
     load_user_dim = LoadTableToGold(
@@ -66,7 +73,10 @@ def generate_dag():
         input_bucket_name = BUCKETS['silver_layer'], 
         output_bucket_name = BUCKETS['gold_layer'],
         query = select_user_dimension,
-        now_timestamp = now
+        now_timestamp = now,
+        conn = conn,
+        lineage_input = {"bucket": BUCKETS["silver_layer"], "name": "silver_sales_data"},
+        lineage_output = {"bucket": BUCKETS["gold_layer"], "name": "gold_user_dim"}
     )
 
     load_location_dim = LoadTableToGold(
@@ -76,7 +86,10 @@ def generate_dag():
         input_bucket_name = BUCKETS['silver_layer'], 
         output_bucket_name = BUCKETS['gold_layer'],
         query = select_location_dimension,
-        now_timestamp = now
+        now_timestamp = now,
+        conn = conn,
+        lineage_input = {"bucket": BUCKETS["silver_layer"], "name": "silver_sales_data"},
+        lineage_output = {"bucket": BUCKETS["gold_layer"], "name": "gold_location_dim"}
     )
 
     load_date_dim = LoadTableToGold(
@@ -86,7 +99,10 @@ def generate_dag():
         input_bucket_name = BUCKETS['silver_layer'], 
         output_bucket_name = BUCKETS['gold_layer'],
         query = select_date_dimension,
-        now_timestamp = now
+        now_timestamp = now,
+        conn = conn,
+        lineage_input = {"bucket": BUCKETS["silver_layer"], "name": "silver_sales_data"},
+        lineage_output = {"bucket": BUCKETS["gold_layer"], "name": "gold_date_dim"}
     )
     
     load_product_dim = LoadTableToGold(
@@ -96,7 +112,10 @@ def generate_dag():
         input_bucket_name = BUCKETS['silver_layer'], 
         output_bucket_name = BUCKETS['gold_layer'],
         query = select_product_dimension,
-        now_timestamp = now
+        now_timestamp = now,
+        conn = conn,
+        lineage_input = {"bucket": BUCKETS["silver_layer"], "name": "silver_sales_data"},
+        lineage_output = {"bucket": BUCKETS["gold_layer"], "name": "gold_product_dim"}
     )
 
     load_sales_fact = LoadTableToGold(
@@ -106,7 +125,10 @@ def generate_dag():
         input_bucket_name = BUCKETS['silver_layer'], 
         output_bucket_name = BUCKETS['gold_layer'],
         query = select_sales_fact,
-        now_timestamp = now
+        now_timestamp = now,
+        conn = conn,
+        lineage_input = {"bucket": BUCKETS["silver_layer"], "name": "silver_sales_data"},
+        lineage_output = {"bucket": BUCKETS["gold_layer"], "name": "gold_sales_fact"}
     )
 
     silver_layer_quality_checks = QualityChecks(
@@ -114,7 +136,8 @@ def generate_dag():
         delta_table_name = 'silver_sales_data',
         duckdb_table_name = 'silver_data', 
         input_bucket_name = BUCKETS['silver_layer'], 
-        now_timestamp = now
+        now_timestamp = now,
+        conn = conn
     )
 
     [create_bronze, create_silver, create_gold] >> load_user_data_to_bronze >> validate_user_data_schema

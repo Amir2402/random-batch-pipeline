@@ -1,18 +1,22 @@
-from airflow.sdk import BaseOperator
+from plugins.operators.BaseOperatorWithLineage import BaseOperatorWithLineage
 from include.utils.S3HelperFunctions import S3HelperFunctions
 from include.utils.queries import connect_duck_db_to_S3
 from include.utils.NotifySlack import notify_slack
 
-class LoadTableToGold(BaseOperator):
-    def __init__(self, delta_table_name, duckdb_table_name, input_bucket_name, output_bucket_name, now_timestamp, query, **kwargs):
-        super().__init__(**kwargs) 
+class LoadTableToGold(BaseOperatorWithLineage):
+    def __init__(self, delta_table_name, duckdb_table_name, input_bucket_name, output_bucket_name, now_timestamp, query, lineage_input, lineage_output, conn, **kwargs):
+        super().__init__(
+            lineage_input = lineage_input,
+            lineage_output = lineage_output,
+            **kwargs
+        )
         self.delta_table_name = delta_table_name
         self.duckdb_table_name = duckdb_table_name
         self.query = query
         self.now_timestamp = now_timestamp
 
         self.S3Helper = S3HelperFunctions(self.now_timestamp)
-        self.conn = connect_duck_db_to_S3()
+        self.conn = conn
 
         self.input_bucket = input_bucket_name
         self.output_bucket = output_bucket_name

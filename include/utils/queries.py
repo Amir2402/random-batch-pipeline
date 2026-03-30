@@ -12,7 +12,7 @@ def connect_duck_db_to_S3():
     conn.load_extension("httpfs")
     conn.install_extension("delta")
     conn.load_extension("delta")
-    
+
     conn.execute(f"SET s3_region='us-east-1';")
     conn.execute(f"SET s3_access_key_id='{S3_ACCESS['aws_access_key']}';")
     conn.execute(f"SET s3_secret_access_key='{S3_ACCESS['aws_secret_key']}';")
