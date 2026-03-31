@@ -1,45 +1,145 @@
-Overview
-========
+# 🚀 Random Batch Pipeline
+A local batch data pipeline built with **Apache Airflow** (via Astronomer), **MinIO**, **Trino**, **Grafana**, **Prometheus**, **DuckDB** , **Delta lake** and **Marquez** — all orchestrated with **Docker Compose**. The pipeline follows the **Medallion Architecture** (Bronze → Silver → Gold), incorporates dedicated data quality validation phases at bronze and  silver layers, and comes with full monitoring and alerting capabilities out of the box.
 
-Welcome to Astronomer! This project was generated after you ran 'astro dev init' using the Astronomer CLI. This readme describes the contents of the project, as well as how to run Apache Airflow on your local machine.
+![Data Lineage](img/lineage.png)
 
-Project Contents
-================
+---
 
-Your Astro project contains the following files and folders:
+## 🏗️ Architecture
+```
+Airflow (Astronomer)
+     │
+     ├── DAGs (ETL jobs)
+     │
+     ▼
+  MinIO (S3-compatible object storage)
+     │
+     ▼
+  Trino (distributed SQL query engine)
+     │
+     ▼
+  Grafana ◄── Prometheus ◄── StatsD Exporter
+                                    ▲
+                              Airflow metrics
 
-- dags: This folder contains the Python files for your Airflow DAGs. By default, this directory includes one example DAG:
-    - `example_astronauts`: This DAG shows a simple ETL pipeline example that queries the list of astronauts currently in space from the Open Notify API and prints a statement for each astronaut. The DAG uses the TaskFlow API to define tasks in Python, and dynamic task mapping to dynamically print a statement for each astronaut. For more on how this DAG works, see our [Getting started tutorial](https://www.astronomer.io/docs/learn/get-started-with-airflow).
-- Dockerfile: This file contains a versioned Astro Runtime Docker image that provides a differentiated Airflow experience. If you want to execute other commands or overrides at runtime, specify them here.
-- include: This folder contains any additional files that you want to include as part of your project. It is empty by default.
-- packages.txt: Install OS-level packages needed for your project by adding them to this file. It is empty by default.
-- requirements.txt: Install Python packages needed for your project by adding them to this file. It is empty by default.
-- plugins: Add custom or community plugins for your project to this file. It is empty by default.
-- airflow_settings.yaml: Use this local-only file to specify Airflow Connections, Variables, and Pools instead of entering them in the Airflow UI as you develop DAGs in this project.
+  Marquez (data lineage & metadata)
+```
+![Pipeline Architecture](img/pipeline_architecture.png)
+---
 
-Deploy Your Project Locally
-===========================
+## 🛠️ Tech Stack
 
-Start Airflow on your local machine by running 'astro dev start'.
+| Component | Role | Port |
+|---|---|---|
+| Apache Airflow (Astronomer) | Workflow orchestration | `8080` |
+| MinIO | S3-compatible object storage | `9000` / `9001` |
+| Trino | Distributed SQL query engine | `8082` |
+| Grafana | Metrics dashboards | `3000` |
+| Prometheus | Metrics collection | `9090` |
+| StatsD Exporter | Airflow metrics bridge | `9102` / `9125` |
+| Marquez | Data lineage tracking | `5000` / `5001` |
+| Marquez Web UI | Lineage visualization | `3001` |
+| PostgreSQL | Airflow metadata DB | `5432` |
 
-This command will spin up five Docker containers on your machine, each for a different Airflow component:
+---
 
-- Postgres: Airflow's Metadata Database
-- Scheduler: The Airflow component responsible for monitoring and triggering tasks
-- DAG Processor: The Airflow component responsible for parsing DAGs
-- API Server: The Airflow component responsible for serving the Airflow UI and API
-- Triggerer: The Airflow component responsible for triggering deferred tasks
+## 📁 Project Structure
 
-When all five containers are ready the command will open the browser to the Airflow UI at http://localhost:8080/. You should also be able to access your Postgres Database at 'localhost:5432/postgres' with username 'postgres' and password 'postgres'.
+```
+random-batch-pipeline/
+├── dags/                        # Airflow DAG definitions
+├── docker/
+│   ├── grafana/                 # Grafana image & provisioning config
+│   ├── minio/                   # MinIO custom image
+│   ├── prometheus/              # Prometheus config
+│   ├── statsd/                  # StatsD exporter mappings
+│   └── trino/                   # Trino catalog & init SQL
+├── include/                     # Additional project files
+├── plugins/
+│   └── operators/               # Custom Airflow operators
+├── tests/
+│   └── dags/                    # DAG unit tests
+├── Dockerfile                   # Astro Runtime image
+├── docker-compose.override.yml  # Extra services (MinIO, Trino, etc.)
+├── makefile                     # Dev shortcuts
+├── packages.txt                 # OS-level dependencies
+└── requirements.txt             # Python dependencies
+```
 
-Note: If you already have either of the above ports allocated, you can either [stop your existing Docker containers or change the port](https://www.astronomer.io/docs/astro/cli/troubleshoot-locally#ports-are-not-available-for-my-local-airflow-webserver).
+---
 
-Deploy Your Project to Astronomer
-=================================
+## ⚡ Prerequisites
 
-If you have an Astronomer account, pushing code to a Deployment on Astronomer is simple. For deploying instructions, refer to Astronomer documentation: https://www.astronomer.io/docs/astro/deploy-code/
+- [Docker](https://docs.docker.com/get-docker/) & Docker Compose
+- [Astronomer CLI](https://www.astronomer.io/docs/astro/cli/install-cli) (`astro`)
+- `make`
 
-Contact
-=======
+---
 
-The Astronomer CLI is maintained with love by the Astronomer team. To report a bug or suggest a change, reach out to our support.
+## 🚀 Getting Started
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/Amir2402/random-batch-pipeline.git
+cd random-batch-pipeline
+```
+
+### 2. Create a `.env` file
+
+```bash
+# Example .env
+BRONZE_LAYER=
+SILVER_LAYER=
+GOLD_LAYER=
+S3_ENDPOINT=
+AWS_ACCESS_KEY=
+AWS_SECRET_KEY=
+REGION_NAME=
+S3_ENDPOINT_DUCKDB=
+API_URL=
+SALES_DATA=
+SLACK_API_KEY=
+CHANNEL_ID=
+RANDOM_USER_API=
+RANDOM_USER_API_KEY=
+```
+
+### 3. Start the stack
+
+```bash
+make up
+```
+
+This command will:
+1. Build all custom Docker images (MinIO, Grafana, Trino, Prometheus, StatsD Exporter)
+2. Start Airflow and all supporting services via `astro dev start`
+3. Run Trino's table initialization SQL
+
+### 4. Stop the stack
+
+```bash
+make down
+```
+
+### 5. Restart
+
+```bash
+make restart
+```
+
+---
+
+## 🌐 Service URLs
+
+| Service | URL | Credentials |
+|---|---|---|
+| Airflow UI | http://localhost:8080 | `admin` / `admin` |
+| MinIO Console | http://localhost:9001 | `admin` / `admin123` |
+| Trino UI | http://localhost:8082 | — |
+| Grafana | http://localhost:3000 | `admin` / `admin` |
+| Prometheus | http://localhost:9090 | — |
+| Marquez API | http://localhost:5000 | — |
+| Marquez Web UI | http://localhost:3001 | — |
+
+> **Note:** If any ports are already in use on your machine, refer to the [Astronomer troubleshooting docs](https://www.astronomer.io/docs/astro/cli/troubleshoot-locally#ports-are-not-available-for-my-local-airflow-webserver).
